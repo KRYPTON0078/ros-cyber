@@ -28,12 +28,25 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; }
-    header { background: #161b22; padding: 1rem 2rem; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; }
+    header {
+      background: #161b22;
+      padding: 1rem 2rem;
+      border-bottom: 1px solid #30363d;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
     header h1 { font-size: 1.4rem; color: #58a6ff; }
     .badge { background: #238636; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; }
     main { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 1rem 2rem; }
     .panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1rem; }
-    .panel h2 { font-size: 0.9rem; color: #8b949e; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .panel h2 {
+      font-size: 0.9rem;
+      color: #8b949e;
+      margin-bottom: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
     .alert { padding: 0.6rem; border-left: 3px solid #f85149; margin-bottom: 0.5rem; background: #0d1117; border-radius: 4px; font-size: 0.85rem; }
     .alert.critical { border-color: #f85149; }
     .alert.high { border-color: #db6d28; }
@@ -46,7 +59,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
     th, td { padding: 0.4rem; text-align: left; border-bottom: 1px solid #21262d; }
     th { color: #8b949e; }
-    #map { height: 200px; background: #0d1117; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #484f58; }
+    #map {
+      height: 200px;
+      background: #0d1117;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #484f58;
+    }
     .full { grid-column: 1 / -1; }
   </style>
 </head>
@@ -66,7 +87,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     </div>
     <div class="panel">
       <h2>SROS2 / Compliance</h2>
-      <div id="compliance">Profile: <strong id="profile">hardened</strong><br/>Kill Switch: <strong id="kill">OFF</strong><br/>Last Scan: <strong id="last-scan">-</strong></div>
+      <div id="compliance">
+        Profile: <strong id="profile">hardened</strong><br/>
+        Kill Switch: <strong id="kill">OFF</strong><br/>
+        Last Scan: <strong id="last-scan">-</strong>
+      </div>
     </div>
     <div class="panel full">
       <h2>Live Alert Feed</h2>
@@ -75,11 +100,21 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <div class="panel">
       <h2>Fleet Map (GPS)</h2>
       <div id="map">Robot positions loading...</div>
-      <table id="fleet-table"><thead><tr><th>Robot</th><th>Lat</th><th>Lon</th><th>Battery</th></tr></thead><tbody></tbody></table>
+      <table id="fleet-table">
+        <thead>
+          <tr><th>Robot</th><th>Lat</th><th>Lon</th><th>Battery</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </div>
     <div class="panel">
       <h2>Recent Audit Log</h2>
-      <table id="audit-table"><thead><tr><th>Robot</th><th>Decision</th><th>Reason</th></tr></thead><tbody></tbody></table>
+      <table id="audit-table">
+        <thead>
+          <tr><th>Robot</th><th>Decision</th><th>Reason</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </div>
   </main>
   <script>
@@ -89,7 +124,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     function addAlert(a) {
       const div = document.createElement('div');
       div.className = 'alert ' + (a.severity || 'medium');
-      div.innerHTML = `<strong>[${a.mitre || 'T0000'}] ${a.title}</strong><br/><small>${a.robot_id} — ${a.description || ''}</small>`;
+      const title = a.mitre || 'T0000';
+      const desc = a.description || '';
+      div.innerHTML = `<strong>[${title}] ${a.title}</strong><br/><small>${a.robot_id} — ${desc}</small>`;
       alertsEl.insertBefore(div, alertsEl.firstChild);
       if (alertsEl.children.length > 20) alertsEl.removeChild(alertsEl.lastChild);
     }
@@ -104,16 +141,34 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       document.getElementById('kill').textContent = d.kill_switch ? 'ON' : 'OFF';
       document.getElementById('last-scan').textContent = d.last_scan || 'Never';
       const tbody = document.querySelector('#fleet-table tbody');
-      tbody.innerHTML = d.fleet.map(r => `<tr><td>${r.robot_id}</td><td>${r.latitude.toFixed(4)}</td><td>${r.longitude.toFixed(4)}</td><td>${r.battery_pct}%</td></tr>`).join('');
-      document.getElementById('map').textContent = d.fleet.length ? d.fleet.map(r => r.robot_id + ' @ ' + r.latitude.toFixed(2) + ',' + r.longitude.toFixed(2)).join(' | ') : 'No robots';
+      const fleetRows = d.fleet.map((r) => (
+        `<tr><td>${r.robot_id}</td><td>${r.latitude.toFixed(4)}</td>` +
+        `<td>${r.longitude.toFixed(4)}</td><td>${r.battery_pct}%</td></tr>`
+      ));
+      tbody.innerHTML = fleetRows.join('');
+      const mapText = d.fleet.length
+        ? d.fleet.map((r) => (
+          r.robot_id + ' @ ' + r.latitude.toFixed(2) + ',' + r.longitude.toFixed(2)
+        )).join(' | ')
+        : 'No robots';
+      document.getElementById('map').textContent = mapText;
       const audit = document.querySelector('#audit-table tbody');
-      audit.innerHTML = d.audit.map(a => `<tr><td>${a.robot_id}</td><td>${a.decision}</td><td>${a.reason}</td></tr>`).join('');
+      const auditRows = d.audit.map((a) => (
+        `<tr><td>${a.robot_id}</td><td>${a.decision}</td><td>${a.reason}</td></tr>`
+      ));
+      audit.innerHTML = auditRows.join('');
       d.recent_alerts.forEach(addAlert);
     }
 
     const ws = new WebSocket(`ws://${location.host}/ws/alerts`);
-    ws.onopen = () => { wsStatus.textContent = 'Live'; wsStatus.style.background = '#238636'; };
-    ws.onclose = () => { wsStatus.textContent = 'Disconnected'; wsStatus.style.background = '#da3633'; };
+    ws.onopen = () => {
+      wsStatus.textContent = 'Live';
+      wsStatus.style.background = '#238636';
+    };
+    ws.onclose = () => {
+      wsStatus.textContent = 'Disconnected';
+      wsStatus.style.background = '#da3633';
+    };
     ws.onmessage = (e) => { addAlert(JSON.parse(e.data)); };
     refreshStats();
     setInterval(refreshStats, 5000);
@@ -212,12 +267,10 @@ def create_app() -> FastAPI:
                     select(func.count()).select_from(SecurityAlert).where(SecurityAlert.acknowledged.is_(False))
                 )
             ).scalar() or 0
-            recent = (
-                await session.execute(select(SecurityAlert).order_by(desc(SecurityAlert.id)).limit(10))
-            ).scalars().all()
-            audit = (
-                await session.execute(select(CommandAuditLog).order_by(desc(CommandAuditLog.id)).limit(10))
-            ).scalars().all()
+            recent_query = select(SecurityAlert).order_by(desc(SecurityAlert.id)).limit(10)
+            recent = (await session.execute(recent_query)).scalars().all()
+            audit_query = select(CommandAuditLog).order_by(desc(CommandAuditLog.id)).limit(10)
+            audit = (await session.execute(audit_query)).scalars().all()
             last_scan = (
                 await session.execute(select(ScanReport).order_by(desc(ScanReport.id)).limit(1))
             ).scalar_one_or_none()
@@ -247,7 +300,10 @@ def create_app() -> FastAPI:
                 }
                 for a in recent
             ],
-            "audit": [{"robot_id": a.robot_id, "decision": a.decision, "reason": a.reason} for a in audit],
+            "audit": [
+                {"robot_id": a.robot_id, "decision": a.decision, "reason": a.reason}
+                for a in audit
+            ],
         }
 
     @app.websocket("/ws/alerts")

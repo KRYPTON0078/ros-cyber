@@ -14,3 +14,4 @@ repos:
       - id: mypy
         additional_dependencies: [types-PyYAML, types-passlib, pydantic-settings, sqlalchemy]
         args: [--config-file=pyproject.toml]
+

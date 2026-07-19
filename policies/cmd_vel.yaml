@@ -1,0 +1,25 @@
+rules:
+  - name: max_linear_velocity
+    type: field_limit
+    field: linear.x
+    max: 1.5
+    action: deny
+
+  - name: max_angular_velocity
+    type: field_limit
+    field: angular.z
+    max: 2.0
+    action: deny
+
+  - name: warehouse_geofence
+    type: geofence
+    bounds:
+      lat_min: 14.4
+      lat_max: 14.8
+      lon_min: 120.9
+      lon_max: 121.2
+
+  - name: kill_switch
+    type: kill_switch
+    trigger: alert_severity >= critical
+    action: halt_all_motion

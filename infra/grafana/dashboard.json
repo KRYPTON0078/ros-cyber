@@ -1,0 +1,22 @@
+{
+  "dashboard": {
+    "title": "ROS Cyber Overview",
+    "panels": [
+      {
+        "title": "HTTP Requests",
+        "type": "graph",
+        "targets": [{"expr": "roscyber_http_requests_total"}]
+      },
+      {
+        "title": "Blocked Commands",
+        "type": "stat",
+        "targets": [{"expr": "roscyber_blocked_commands_total"}]
+      },
+      {
+        "title": "Alerts Raised",
+        "type": "stat",
+        "targets": [{"expr": "roscyber_alerts_raised_total"}]
+      }
+    ]
+  }
+}

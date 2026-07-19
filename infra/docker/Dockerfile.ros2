@@ -1,0 +1,8 @@
+FROM ros:humble-ros-base
+WORKDIR /app
+RUN apt-get update && apt-get install -y python3-pip curl && rm -rf /var/lib/apt/lists/*
+COPY ros2_ws /app/ros2_ws
+COPY scripts /app/scripts
+RUN pip3 install httpx
+ENV PYTHONPATH=/app/ros2_ws
+CMD ["python3", "/app/ros2_ws/scripts/fleet_simulator.py"]

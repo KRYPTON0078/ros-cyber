@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: roscyber
+    static_configs:
+      - targets:
+          - ingestion:8000
+          - policy:8001
+          - dashboard:8002
+    metrics_path: /metrics

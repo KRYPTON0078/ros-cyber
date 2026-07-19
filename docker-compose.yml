@@ -1,0 +1,166 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: roscyber
+      POSTGRES_PASSWORD: roscyber
+      POSTGRES_DB: roscyber
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U roscyber"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: roscyber
+    volumes:
+      - ./infra/grafana/dashboard.json:/var/lib/grafana/dashboards/roscyber.json:ro
+
+  ingestion:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile
+    command: uvicorn roscyber.ingestion.app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    env_file: .env.example
+    environment:
+      DATABASE_URL: postgresql+asyncpg://roscyber:roscyber@postgres:5432/roscyber
+      REDIS_URL: redis://redis:6379/0
+      MQTT_HOST: mosquitto
+      ROSCYBER_PROFILE: hardened
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  policy:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile
+    command: uvicorn roscyber.policy.app:app --host 0.0.0.0 --port 8001
+    ports:
+      - "8001:8001"
+    env_file: .env.example
+    environment:
+      DATABASE_URL: postgresql+asyncpg://roscyber:roscyber@postgres:5432/roscyber
+      REDIS_URL: redis://redis:6379/0
+      POLICIES_DIR: /app/policies
+    volumes:
+      - ./policies:/app/policies:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  detection:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile
+    command: python -m roscyber.detection.worker
+    env_file: .env.example
+    environment:
+      DATABASE_URL: postgresql+asyncpg://roscyber:roscyber@postgres:5432/roscyber
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile
+    command: uvicorn roscyber.dashboard.app:app --host 0.0.0.0 --port 8002
+    ports:
+      - "8002:8002"
+    env_file: .env.example
+    environment:
+      DATABASE_URL: postgresql+asyncpg://roscyber:roscyber@postgres:5432/roscyber
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      detection:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  ros2-fleet:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.ros2
+    environment:
+      ROS_DOMAIN_ID: "0"
+      INGESTION_URL: http://ingestion:8000
+      ROBOT_IDS: "robot-alpha,robot-beta,robot-gamma"
+    depends_on:
+      ingestion:
+        condition: service_healthy
+    networks:
+      - default
+
+  rosbridge:
+    image: ros:humble-ros-base
+    command: bash -c "apt-get update && apt-get install -y ros-humble-rosbridge-suite && source /opt/ros/humble/setup.bash && ros2 launch rosbridge_server rosbridge_websocket_launch.xml"
+    ports:
+      - "9090:9090"
+    environment:
+      ROS_DOMAIN_ID: "0"
+
+volumes:
+  pgdata:
+
+networks:
+  default:
+    name: roscyber-net

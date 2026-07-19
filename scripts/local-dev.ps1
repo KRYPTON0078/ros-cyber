@@ -27,6 +27,7 @@ try {
 $env:PYTHONPATH = "src"
 $env:DATABASE_URL = "sqlite+aiosqlite:///./roscyber_local.db"
 $env:REDIS_URL = "redis://localhost:6379/0"
+$env:ROSCYBER_DISABLE_REDIS = "true"
 $env:JWT_SECRET = "local-dev-secret-change-in-production-min-32-chars"
 $env:ROSCYBER_PROFILE = "hardened"
 
@@ -49,8 +50,10 @@ function Start-ServiceProcess {
     $log = Join-Path $logDir "$Name.log"
     if (Test-Path $log) { Clear-Content $log }
     Write-Host "Starting $Name on :$Port..." -ForegroundColor Green
+    $errLog = Join-Path $logDir "$Name.err.log"
+    if (Test-Path $errLog) { Clear-Content $errLog }
     $proc = Start-Process -FilePath $python -ArgumentList "-m", "uvicorn", $App, "--host", "0.0.0.0", "--port", "$Port" `
-        -RedirectStandardOutput $log -RedirectStandardError $log -PassThru -WindowStyle Hidden
+        -RedirectStandardOutput $log -RedirectStandardError $errLog -PassThru -WindowStyle Hidden
     $processes += $proc
 }
 

@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     telemetry_flood_threshold: int = 50
     gps_jump_threshold_m: float = 500.0
 
+    disable_redis: bool = Field(default=False, alias="ROSCYBER_DISABLE_REDIS")
+
     policies_dir: str = "policies"
     kill_switch_active: bool = False
 

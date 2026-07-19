@@ -14,15 +14,26 @@ async def get_redis() -> redis.Redis:
     global _client
     if _client is None:
         settings = get_settings()
+        if settings.disable_redis:
+            raise RuntimeError("Redis disabled by ROSCYBER_DISABLE_REDIS")
         _client = redis.from_url(settings.redis_url, decode_responses=True)
     return _client
 
 
 async def publish_event(stream: str, event: dict[str, Any]) -> str:
-    client = await get_redis()
-    payload = {k: json.dumps(v) if isinstance(v, (dict, list)) else str(v) for k, v in event.items()}
-    msg_id = await client.xadd(stream, payload)
-    return str(msg_id)
+    settings = get_settings()
+    if settings.disable_redis:
+        return "local-0"
+    try:
+        client = await get_redis()
+        payload = {
+            k: json.dumps(v) if isinstance(v, (dict, list)) else str(v)
+            for k, v in event.items()
+        }
+        msg_id = await client.xadd(stream, payload)
+        return str(msg_id)
+    except Exception:
+        return "local-0"
 
 
 async def read_events(stream: str, last_id: str = "0", count: int = 10) -> list[tuple[str, dict[str, str]]]:

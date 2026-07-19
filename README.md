@@ -21,22 +21,29 @@
 
 ## Quick Start
 
+### Option A — Docker (full stack, recommended)
+
+**Requires [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/)** installed and running.
+
 ```powershell
-# Clone and configure
 git clone https://github.com/KRYPTON0078/ros-cyber.git
 cd ros-cyber
-cp .env.example .env
-
-# Start full stack (hardened profile)
-make docker-up
-
-# Open services
-# SOC Dashboard:  http://localhost:8002
-# Ingestion API:  http://localhost:8000/docs
-# Policy Engine:  http://localhost:8001/docs
-# Grafana:        http://localhost:3000  (admin / roscyber)
-# Prometheus:     http://localhost:9091
+pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org -e ".[dev]"
+.\scripts\docker-up.ps1
 ```
+
+Or with Make (if Docker is in PATH): `make docker-up`
+
+### Option B — Local dev without Docker (Windows)
+
+If Docker is not installed, use the PowerShell script:
+
+```powershell
+pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org -e ".[dev]"
+.\scripts\local-dev.ps1
+```
+
+This starts Ingestion API, Policy Engine, and SOC Dashboard on ports 8000–8002 using SQLite.
 
 ## Demo Credentials
 
@@ -107,3 +114,4 @@ MIT — see [LICENSE](LICENSE)
 ## Security
 
 See [SECURITY.md](SECURITY.md) for responsible disclosure policy.
+# CI trigger

@@ -1,0 +1,109 @@
+[project]
+name = "roscyber"
+version = "0.1.0"
+description = "Production-grade ROS2 cyber-physical security platform"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [{ name = "Magna Dina Neves" }]
+keywords = ["ros2", "cybersecurity", "robotics", "iot-security"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Security",
+]
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    "redis>=5.2.0",
+    "httpx>=0.28.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "bcrypt>=4.2.0",
+    "pyyaml>=6.0.2",
+    "prometheus-client>=0.21.0",
+    "structlog>=24.4.0",
+    "python-multipart>=0.0.17",
+    "websockets>=14.0",
+    "aiomqtt>=2.3.0",
+    "numpy>=2.1.0",
+    "typer>=0.14.0",
+    "rich>=13.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "httpx>=0.28.0",
+    "ruff>=0.8.0",
+    "black>=24.10.0",
+    "mypy>=1.13.0",
+    "bandit>=1.8.0",
+    "pip-audit>=2.7.0",
+    "pre-commit>=4.0.0",
+    "types-pyyaml>=6.0.0",
+    "types-passlib>=1.7.0",
+    "aiosqlite>=0.20.0",
+]
+
+[project.scripts]
+roscyber = "roscyber.cli.main:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/roscyber"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["roscyber"]
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = ["passlib.*", "jose.*", "aiomqtt.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["roscyber"]
+branch = true
+omit = [
+    "src/roscyber/detection/worker.py",
+    "src/roscyber/dashboard/app.py",
+]
+
+[tool.coverage.report]
+fail_under = 80
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "labs"]

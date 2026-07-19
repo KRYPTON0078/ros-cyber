@@ -30,7 +30,7 @@ scan_report.json
 Thumbs.db
 
 # Docker
-pgdata/
+roscyber_local.db
 
 # Secrets
 *.pem

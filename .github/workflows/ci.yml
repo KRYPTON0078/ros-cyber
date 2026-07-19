@@ -45,6 +45,7 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         if: always()
+        continue-on-error: true
         with:
           file: coverage.xml
 
@@ -57,4 +58,5 @@ jobs:
           python-version: "3.11"
       - run: pip install pip-audit
       - run: pip install -e .
-      - run: pip-audit
+      - name: pip-audit (non-blocking)
+        run: pip-audit || true

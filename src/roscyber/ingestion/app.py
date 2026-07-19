@@ -21,8 +21,6 @@ from roscyber.ingestion.auth import (
     verify_password,
 )
 from roscyber.ingestion.schemas import (
-    CommandIn,
-    CommandOut,
     EventIn,
     HealthResponse,
     TelemetryIn,
@@ -32,7 +30,12 @@ from roscyber.ingestion.schemas import (
 )
 from roscyber.shared.config import Settings, get_settings
 from roscyber.shared.database import get_db, init_db
-from roscyber.shared.logging import configure_logging, get_correlation_id, get_logger, set_correlation_id
+from roscyber.shared.logging import (
+    configure_logging,
+    get_correlation_id,
+    get_logger,
+    set_correlation_id,
+)
 from roscyber.shared.metrics import REQUEST_LATENCY, REQUESTS_TOTAL, metrics_response
 from roscyber.shared.models import RobotTelemetry
 from roscyber.shared.redis_client import publish_event
@@ -187,11 +190,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         user: Annotated[User, Depends(get_current_user)],
     ) -> list[TelemetryOut]:
         if settings.profile == "hardened" and user.role == Role.OPERATOR:
-            raise HTTPException(status_code=403, detail="Operators cannot read arbitrary robot telemetry")
+            raise HTTPException(
+                status_code=403,
+                detail="Operators cannot read arbitrary robot telemetry",
+            )
 
-        result = await db.execute(
-            select(RobotTelemetry).where(RobotTelemetry.robot_id == robot_id).order_by(RobotTelemetry.id.desc()).limit(50)
+        query = (
+            select(RobotTelemetry)
+            .where(RobotTelemetry.robot_id == robot_id)
+            .order_by(RobotTelemetry.id.desc())
+            .limit(50)
         )
+        result = await db.execute(query)
         rows = result.scalars().all()
         return [
             TelemetryOut(
@@ -211,7 +221,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ]
 
     @app.post("/v1/events")
-    async def ingest_event(body: EventIn, user: Annotated[object, Depends(get_current_user)]) -> dict[str, str]:
+    async def ingest_event(
+        body: EventIn,
+        user: Annotated[object, Depends(get_current_user)],
+    ) -> dict[str, str]:
         await publish_event(
             settings.detection_stream,
             {"event_type": body.event_type, "robot_id": body.robot_id, **body.payload},

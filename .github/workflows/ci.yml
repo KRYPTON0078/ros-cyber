@@ -40,7 +40,7 @@ jobs:
         run: pytest tests/ --cov=roscyber --cov-report=xml --cov-fail-under=80
         env:
           JWT_SECRET: ci-test-secret-key-minimum-32-characters-long
-          DATABASE_URL: sqlite+aiosqlite:///:memory:
+          DATABASE_URL: "sqlite+aiosqlite:///:memory:"
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4

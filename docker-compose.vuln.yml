@@ -1,0 +1,38 @@
+# Vulnerable lab overlay — ISOLATED OFFENSIVE TESTING ONLY
+# Usage: docker compose -f docker-compose.yml -f docker-compose.vuln.yml up
+
+services:
+  ingestion:
+    environment:
+      ROSCYBER_PROFILE: vulnerable
+      JWT_SECRET: super-weak-secret
+
+  policy:
+    environment:
+      ROSCYBER_PROFILE: vulnerable
+
+  dashboard:
+    environment:
+      ROSCYBER_PROFILE: vulnerable
+
+  rosbridge:
+    ports:
+      - "9090:9090"
+
+  attack-injector:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.ros2
+    command: python /app/ros2_ws/scripts/attack_injector.py
+    environment:
+      INGESTION_URL: http://ingestion:8000
+      POLICY_URL: http://policy:8001
+    depends_on:
+      - ingestion
+      - policy
+    profiles:
+      - vuln
+
+networks:
+  default:
+    name: roscyber-vuln-net

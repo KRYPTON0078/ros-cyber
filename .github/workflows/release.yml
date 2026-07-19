@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: pip install -e ".[dev]" cyclonedx-bom
+
+      - name: Run tests
+        run: pytest tests/ --cov=roscyber --cov-fail-under=80
+        env:
+          JWT_SECRET: release-test-secret-key-min-32-chars
+          DATABASE_URL: sqlite+aiosqlite:///:memory:
+
+      - name: Generate SBOM
+        run: cyclonedx-py environment -o sbom.json
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sbom.json
+          generate_release_notes: true

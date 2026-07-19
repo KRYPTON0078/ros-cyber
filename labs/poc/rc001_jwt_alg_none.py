@@ -2,7 +2,7 @@
 
 import httpx
 
-TOKEN = "eyJhbGciOiJub25lI.eyJzdWIiOiJhdHRhY2tlciIsInJvbGUiOiJhZG1pbiJ9."
+TOKEN = "eyJhbGciOiJub25lIn0.eyJzdWIiOiJhdHRhY2tlciIsInJvbGUiOiJhZG1pbiJ9."
 URL = "http://localhost:8000/v1/admin/config"
 
 

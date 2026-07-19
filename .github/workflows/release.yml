@@ -24,7 +24,7 @@ jobs:
         run: pytest tests/ --cov=roscyber --cov-fail-under=80
         env:
           JWT_SECRET: release-test-secret-key-min-32-chars
-          DATABASE_URL: sqlite+aiosqlite:///:memory:
+          DATABASE_URL: "sqlite+aiosqlite:///:memory:"
 
       - name: Generate SBOM
         run: cyclonedx-py environment -o sbom.json

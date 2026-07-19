@@ -1,6 +1,6 @@
 # ROS Cyber
 
-[![CI](https://github.com/YOUR_USERNAME/ros-cyber/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/ros-cyber/actions/workflows/ci.yml)
+[![CI](https://github.com/KRYPTON0078/ros-cyber/actions/workflows/ci.yml/badge.svg)](https://github.com/KRYPTON0078/ros-cyber/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Coverage](https://img.shields.io/badge/coverage-80%25+-green.svg)](tests/)
@@ -23,7 +23,7 @@
 
 ```powershell
 # Clone and configure
-git clone https://github.com/YOUR_USERNAME/ros-cyber.git
+git clone https://github.com/KRYPTON0078/ros-cyber.git
 cd ros-cyber
 cp .env.example .env
 

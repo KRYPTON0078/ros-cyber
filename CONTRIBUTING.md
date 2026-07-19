@@ -5,7 +5,7 @@ Thank you for your interest in contributing to ROS Cyber!
 ## Development Setup
 
 ```powershell
-git clone https://github.com/YOUR_USERNAME/ros-cyber.git
+git clone https://github.com/KRYPTON0078/ros-cyber.git
 cd ros-cyber
 pip install -e ".[dev]"
 pre-commit install

@@ -20,4 +20,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SBOM generation on release
 - Comprehensive documentation: requirements, architecture, ADRs, threat model, pentest report
 
-[0.1.0]: https://github.com/YOUR_USERNAME/ros-cyber/releases/tag/v0.1.0
+[0.1.0]: https://github.com/KRYPTON0078/ros-cyber/releases/tag/v0.1.0

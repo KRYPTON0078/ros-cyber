@@ -337,6 +337,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <canvas id="severity-chart" height="120"></canvas>
         </div>
       </div>
+      <div class="pill-row" id="severity-counts" style="margin-top: 0.8rem;"></div>
     </div>
     <div class="panel">
       <h2>Fleet Map (GPS)</h2>
@@ -403,6 +404,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     const filterSelect = document.getElementById('alert-filter');
     const auditFilter = document.getElementById('audit-filter');
     const logFeed = document.getElementById('log-feed');
+    const severityCounts = document.getElementById('severity-counts');
     const tokenKey = 'roscyber_token';
     const mapEl = document.getElementById('map');
     let map;
@@ -576,6 +578,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         counts.low || 0
       ];
       severityChart.update();
+      severityCounts.innerHTML = (
+        `<span class="pill">Critical: <strong>${counts.critical || 0}</strong></span>` +
+        `<span class="pill">High: <strong>${counts.high || 0}</strong></span>` +
+        `<span class="pill">Medium: <strong>${counts.medium || 0}</strong></span>` +
+        `<span class="pill">Low: <strong>${counts.low || 0}</strong></span>`
+      );
     }
 
     function renderTimeline(alerts) {

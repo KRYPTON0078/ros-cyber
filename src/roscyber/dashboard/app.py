@@ -27,70 +27,165 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <title>ROS Cyber SOC</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+    }
     header {
-      background: #161b22;
-      padding: 1rem 2rem;
-      border-bottom: 1px solid #30363d;
+      background: #0f1623;
+      padding: 1.2rem 2rem;
+      border-bottom: 1px solid #1f2937;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    header h1 { font-size: 1.4rem; color: #58a6ff; }
-    .badge { background: #238636; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; }
-    main { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 1rem 2rem; }
-    .panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1rem; }
-    .panel h2 {
-      font-size: 0.9rem;
+    header h1 {
+      font-size: 1.45rem;
+      color: #58a6ff;
+    }
+    header p {
+      font-size: 0.85rem;
       color: #8b949e;
+      margin-top: 0.35rem;
+    }
+    .badge {
+      background: #238636;
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .layout {
+      padding: 1.2rem 2rem 2rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .panel {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+    .panel h2 {
+      font-size: 0.8rem;
+      color: #94a3b8;
       margin-bottom: 0.8rem;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.08em;
     }
-    .alert { padding: 0.6rem; border-left: 3px solid #f85149; margin-bottom: 0.5rem; background: #0d1117; border-radius: 4px; font-size: 0.85rem; }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.7rem;
+    }
+    .stat {
+      text-align: left;
+      padding: 0.9rem;
+      background: #0b1220;
+      border-radius: 8px;
+      border: 1px solid #1f2937;
+    }
+    .stat .val {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #58a6ff;
+    }
+    .stat .lbl {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+    .pill-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .pill {
+      background: #0b1220;
+      border: 1px solid #1f2937;
+      border-radius: 999px;
+      padding: 0.35rem 0.6rem;
+      font-size: 0.75rem;
+      color: #e6edf3;
+    }
+    .alert {
+      padding: 0.65rem 0.75rem;
+      border-left: 3px solid #f85149;
+      margin-bottom: 0.5rem;
+      background: #0b1220;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
     .alert.critical { border-color: #f85149; }
     .alert.high { border-color: #db6d28; }
     .alert.medium { border-color: #d29922; }
     .alert.low { border-color: #58a6ff; }
-    .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
-    .stat { text-align: center; padding: 0.8rem; background: #0d1117; border-radius: 6px; }
-    .stat .val { font-size: 1.8rem; font-weight: bold; color: #58a6ff; }
-    .stat .lbl { font-size: 0.75rem; color: #8b949e; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-    th, td { padding: 0.4rem; text-align: left; border-bottom: 1px solid #21262d; }
-    th { color: #8b949e; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      margin-top: 0.4rem;
+    }
+    th, td {
+      padding: 0.45rem 0.4rem;
+      text-align: left;
+      border-bottom: 1px solid #1f2937;
+    }
+    th { color: #94a3b8; }
     #map {
-      height: 200px;
-      background: #0d1117;
-      border-radius: 6px;
+      height: 190px;
+      background: #0b1220;
+      border-radius: 8px;
+      border: 1px solid #1f2937;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #484f58;
+      color: #6b7280;
+      margin-bottom: 0.6rem;
+      font-size: 0.85rem;
     }
     .full { grid-column: 1 / -1; }
+    footer {
+      padding: 0.8rem 2rem 1.5rem;
+      color: #6b7280;
+      font-size: 0.75rem;
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>ROS Cyber — Security Operations Center</h1>
+    <div>
+      <h1>ROS Cyber — Security Operations Center</h1>
+      <p>Real-time fleet security posture, policy enforcement, and threat telemetry.</p>
+    </div>
     <span class="badge" id="ws-status">Connecting...</span>
   </header>
-  <main>
+  <main class="layout">
     <div class="panel">
-      <h2>Fleet Status</h2>
+      <h2>Fleet Overview</h2>
       <div class="stat-grid">
-        <div class="stat"><div class="val" id="robot-count">-</div><div class="lbl">Active Robots</div></div>
-        <div class="stat"><div class="val" id="alert-count">-</div><div class="lbl">Open Alerts</div></div>
-        <div class="stat"><div class="val" id="scan-count">-</div><div class="lbl">Scan Findings</div></div>
+        <div class="stat">
+          <div class="val" id="robot-count">-</div>
+          <div class="lbl">Active Robots</div>
+        </div>
+        <div class="stat">
+          <div class="val" id="alert-count">-</div>
+          <div class="lbl">Open Alerts</div>
+        </div>
+        <div class="stat">
+          <div class="val" id="scan-count">-</div>
+          <div class="lbl">Scan Findings</div>
+        </div>
       </div>
     </div>
     <div class="panel">
-      <h2>SROS2 / Compliance</h2>
-      <div id="compliance">
-        Profile: <strong id="profile">hardened</strong><br/>
-        Kill Switch: <strong id="kill">OFF</strong><br/>
-        Last Scan: <strong id="last-scan">-</strong>
+      <h2>Compliance & Controls</h2>
+      <div class="pill-row">
+        <span class="pill">Profile: <strong id="profile">hardened</strong></span>
+        <span class="pill">Kill Switch: <strong id="kill">OFF</strong></span>
+        <span class="pill">Last Scan: <strong id="last-scan">-</strong></span>
       </div>
     </div>
     <div class="panel full">
@@ -117,6 +212,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       </table>
     </div>
   </main>
+  <footer>ROS Cyber v0.1.0 • Built for cyber-physical security telemetry.</footer>
   <script>
     const alertsEl = document.getElementById('alerts');
     const wsStatus = document.getElementById('ws-status');

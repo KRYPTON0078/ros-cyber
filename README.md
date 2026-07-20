@@ -121,6 +121,7 @@ ros-cyber/
 | [DEMO_GUIDE.md](docs/DEMO_GUIDE.md) | Step-by-step demo instructions |
 | [API_REFERENCE.md](docs/API_REFERENCE.md) | Quick API reference |
 | [ALERT_RULES.md](docs/ALERT_RULES.md) | Alert rules and severities |
+| [LOCAL_MODE.md](docs/LOCAL_MODE.md) | Local mode limitations |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes |
 
 ## License

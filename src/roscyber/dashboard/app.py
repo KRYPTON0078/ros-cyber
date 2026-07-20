@@ -174,6 +174,20 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       font-size: 0.85rem;
     }
     #map.leaflet-container { color: #e6edf3; }
+    .map-legend {
+      display: flex;
+      gap: 0.6rem;
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-bottom: 0.4rem;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-right: 0.3rem;
+    }
     .chart-wrap {
       background: #0b1220;
       border: 1px solid #1f2937;
@@ -314,6 +328,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <div class="panel">
       <h2>Fleet Map (GPS)</h2>
       <div id="map">Robot positions loading...</div>
+      <div class="map-legend">
+        <span><span class="legend-dot" style="background:#22c55e"></span>70%+</span>
+        <span><span class="legend-dot" style="background:#fbbf24"></span>40-69%</span>
+        <span><span class="legend-dot" style="background:#ef4444"></span>Below 40%</span>
+      </div>
       <table id="fleet-table">
         <thead>
           <tr><th>Robot</th><th>Lat</th><th>Lon</th><th>Battery</th></tr>

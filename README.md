@@ -134,6 +134,7 @@ ros-cyber/
 | [FLEET_HEALTH.md](docs/FLEET_HEALTH.md) | Fleet health summary |
 | [ALERT_FILTERS.md](docs/ALERT_FILTERS.md) | Alert severity filters |
 | [AUDIT_FILTERS.md](docs/AUDIT_FILTERS.md) | Audit log filters |
+| [ACKNOWLEDGEMENTS.md](docs/ACKNOWLEDGEMENTS.md) | Alert acknowledgements |
 
 ## License
 

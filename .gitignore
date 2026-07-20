@@ -25,6 +25,9 @@ htmlcov/
 reports/
 scan_report.json
 
+# Logs
+logs/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -130,6 +130,7 @@ ros-cyber/
 | [TOKENS.md](docs/TOKENS.md) | REST auth tokens |
 | [CHARTS.md](docs/CHARTS.md) | Alert charting |
 | [MAP.md](docs/MAP.md) | Fleet map and marker legend |
+| [SCRIPTS.md](docs/SCRIPTS.md) | Helper scripts |
 
 ## License
 

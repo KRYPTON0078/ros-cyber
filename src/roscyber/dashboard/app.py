@@ -1,15 +1,18 @@
 """SOC dashboard with WebSocket live alerts."""
 
 import asyncio
+import csv
+import io
 import json
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, PlainTextResponse, Response
+from fastapi import Depends, FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse, PlainTextResponse, Response, StreamingResponse
 from sqlalchemy import desc, func, select
 
 from roscyber import __version__
+from roscyber.ingestion.auth import User, get_current_user
 from roscyber.ingestion.schemas import HealthResponse
 from roscyber.shared.config import get_settings
 from roscyber.shared.database import get_session_factory, init_db
@@ -27,6 +30,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8"/>
   <title>ROS Cyber SOC</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -148,6 +157,65 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       margin-bottom: 0.6rem;
       font-size: 0.85rem;
     }
+    #map.leaflet-container { color: #e6edf3; }
+    .chart-wrap {
+      background: #0b1220;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      padding: 0.8rem;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .timeline {
+      max-height: 220px;
+      overflow: auto;
+      font-size: 0.82rem;
+    }
+    .timeline-item {
+      border-left: 2px solid #374151;
+      padding: 0.4rem 0.6rem;
+      margin-bottom: 0.4rem;
+      background: #0b1220;
+      border-radius: 6px;
+    }
+    .timeline-item strong { color: #93c5fd; }
+    .action-bar {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      border: 1px solid #1f2937;
+      background: #111827;
+      color: #e5e7eb;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .btn.primary {
+      background: #2563eb;
+      border-color: #1d4ed8;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .token-box {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", monospace;
+      font-size: 0.75rem;
+      background: #0b1220;
+      border: 1px solid #1f2937;
+      padding: 0.6rem;
+      border-radius: 6px;
+      word-break: break-all;
+      max-height: 120px;
+      overflow: auto;
+    }
     .full { grid-column: 1 / -1; }
     footer {
       padding: 0.8rem 2rem 1.5rem;
@@ -190,11 +258,28 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <span class="pill">Last Scan: <strong id="last-scan">-</strong></span>
         <span class="pill">Uptime: <strong id="uptime">-</strong></span>
         <span class="pill">Server Time: <strong id="server-time">-</strong></span>
+        <span class="pill">Role: <strong id="role">guest</strong></span>
+      </div>
+      <div class="action-bar" style="margin-top: 0.8rem;">
+        <button class="btn primary" id="demo-seed-btn">Seed Demo Data</button>
+        <button class="btn" id="export-alerts-btn">Export Alerts CSV</button>
+        <button class="btn" id="export-audit-btn">Export Audit CSV</button>
       </div>
     </div>
     <div class="panel full">
       <h2>Live Alert Feed</h2>
       <div id="alerts"><div class="alert medium">Waiting for events...</div></div>
+    </div>
+    <div class="panel full">
+      <h2>Alert Analytics</h2>
+      <div class="grid-2">
+        <div class="chart-wrap">
+          <canvas id="alert-chart" height="120"></canvas>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="severity-chart" height="120"></canvas>
+        </div>
+      </div>
     </div>
     <div class="panel">
       <h2>Fleet Map (GPS)</h2>
@@ -215,11 +300,84 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <tbody></tbody>
       </table>
     </div>
+    <div class="panel full">
+      <h2>Attack Replay Timeline</h2>
+      <div class="timeline" id="timeline"></div>
+    </div>
+    <div class="panel full">
+      <h2>Operator Session</h2>
+      <div class="action-bar">
+        <button class="btn" id="login-operator">Login as Operator</button>
+        <button class="btn" id="login-admin">Login as Admin</button>
+        <button class="btn" id="clear-token">Clear Token</button>
+        <button class="btn" id="copy-token">Copy Token</button>
+      </div>
+      <div class="token-box" id="token-box">No token stored.</div>
+    </div>
   </main>
   <footer>ROS Cyber v0.1.0 • Built for cyber-physical security telemetry.</footer>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
   <script>
     const alertsEl = document.getElementById('alerts');
     const wsStatus = document.getElementById('ws-status');
+    const tokenBox = document.getElementById('token-box');
+    const timelineEl = document.getElementById('timeline');
+    const tokenKey = 'roscyber_token';
+    const mapEl = document.getElementById('map');
+    let map;
+    let markers = {};
+    let alertChart;
+    let severityChart;
+
+    function initMap() {
+      map = L.map(mapEl, { zoomControl: true }).setView([14.6, 120.98], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+    }
+
+    function initCharts() {
+      const alertCtx = document.getElementById('alert-chart').getContext('2d');
+      const severityCtx = document.getElementById('severity-chart').getContext('2d');
+      alertChart = new Chart(alertCtx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Alerts (last 10)',
+            data: [],
+            borderColor: '#60a5fa',
+            backgroundColor: 'rgba(96,165,250,0.2)',
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+      severityChart = new Chart(severityCtx, {
+        type: 'bar',
+        data: {
+          labels: ['critical', 'high', 'medium', 'low'],
+          datasets: [{
+            label: 'By Severity',
+            data: [0, 0, 0, 0],
+            backgroundColor: ['#f87171', '#fb923c', '#fbbf24', '#60a5fa']
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
 
     function addAlert(a) {
       const div = document.createElement('div');
@@ -255,12 +413,21 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         `<td>${r.longitude.toFixed(4)}</td><td>${r.battery_pct}%</td></tr>`
       ));
       tbody.innerHTML = fleetRows.join('');
-      const mapText = d.fleet.length
-        ? d.fleet.map((r) => (
-          r.robot_id + ' @ ' + r.latitude.toFixed(2) + ',' + r.longitude.toFixed(2)
-        )).join(' | ')
-        : 'No robots';
-      document.getElementById('map').textContent = mapText;
+      if (!map) {
+        initMap();
+      }
+      if (d.fleet.length === 0) {
+        mapEl.textContent = 'No robots';
+      } else {
+        d.fleet.forEach((r) => {
+          const coords = [r.latitude, r.longitude];
+          if (!markers[r.robot_id]) {
+            markers[r.robot_id] = L.marker(coords).addTo(map).bindPopup(r.robot_id);
+          } else {
+            markers[r.robot_id].setLatLng(coords);
+          }
+        });
+      }
       const audit = document.querySelector('#audit-table tbody');
       const auditRows = d.audit.map((a) => (
         `<tr><td>${a.robot_id}</td><td>${a.decision}</td><td>${a.reason}</td></tr>`
@@ -283,9 +450,114 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       if (Array.isArray(data) && data.length) {
         alertsEl.innerHTML = '';
         data.forEach(addAlert);
+        updateCharts(data);
+        renderTimeline(data);
       } else {
         renderEmptyAlerts();
       }
+    }
+
+    function updateCharts(alerts) {
+      const labels = alerts.map((a) => new Date(a.created_at).toLocaleTimeString());
+      const values = alerts.map(() => 1);
+      alertChart.data.labels = labels;
+      alertChart.data.datasets[0].data = values;
+      alertChart.update();
+      const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+      alerts.forEach((a) => { counts[a.severity] = (counts[a.severity] || 0) + 1; });
+      severityChart.data.datasets[0].data = [
+        counts.critical || 0,
+        counts.high || 0,
+        counts.medium || 0,
+        counts.low || 0
+      ];
+      severityChart.update();
+    }
+
+    function renderTimeline(alerts) {
+      const items = alerts.map((a) => (
+        `<div class="timeline-item"><strong>${a.severity.toUpperCase()}</strong> ` +
+        `${a.title} — ${new Date(a.created_at).toLocaleString()}</div>`
+      ));
+      timelineEl.innerHTML = items.join('') || '<div class="timeline-item">No alerts yet.</div>';
+    }
+
+    function setToken(token) {
+      if (token) {
+        localStorage.setItem(tokenKey, token);
+        tokenBox.textContent = token;
+        refreshRole(token);
+      } else {
+        localStorage.removeItem(tokenKey);
+        tokenBox.textContent = 'No token stored.';
+        document.getElementById('role').textContent = 'guest';
+      }
+    }
+
+    async function refreshRole(token) {
+      try {
+        const resp = await fetch('/api/v1/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          document.getElementById('role').textContent = data.role;
+          setRoleControls(data.role);
+        }
+      } catch (_) {
+        document.getElementById('role').textContent = 'guest';
+        setRoleControls('guest');
+      }
+    }
+
+    function setRoleControls(role) {
+      const seedBtn = document.getElementById('demo-seed-btn');
+      const exportAlertsBtn = document.getElementById('export-alerts-btn');
+      const exportAuditBtn = document.getElementById('export-audit-btn');
+      if (role === 'admin') {
+        seedBtn.disabled = false;
+        exportAlertsBtn.disabled = false;
+        exportAuditBtn.disabled = false;
+      } else if (role === 'operator') {
+        seedBtn.disabled = false;
+        exportAlertsBtn.disabled = true;
+        exportAuditBtn.disabled = true;
+      } else {
+        seedBtn.disabled = true;
+        exportAlertsBtn.disabled = true;
+        exportAuditBtn.disabled = true;
+      }
+    }
+
+    async function login(username, password) {
+      const resp = await fetch('http://localhost:8000/v1/auth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await resp.json();
+      setToken(data.access_token);
+    }
+
+    function copyToken() {
+      const token = localStorage.getItem(tokenKey) || '';
+      if (token) {
+        navigator.clipboard.writeText(token);
+      }
+    }
+
+    async function seedDemo() {
+      const token = localStorage.getItem(tokenKey);
+      if (!token) {
+        await login('operator', 'operator123!');
+      }
+      await fetch('/api/v1/demo/seed');
+      await pollAlerts();
+      await refreshStats();
+    }
+
+    async function exportCsv(path) {
+      window.open(path, '_blank');
     }
 
     let ws;
@@ -302,11 +574,49 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       ws.onmessage = (e) => { addAlert(JSON.parse(e.data)); };
     }
 
+    function initStreams() {
+      const alertStream = new EventSource('/api/v1/stream/alerts');
+      alertStream.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        addAlert({
+          severity: data.severity,
+          title: data.title,
+          description: data.reason || data.title,
+          robot_id: data.robot_id,
+          mitre: data.mitre || 'T0000'
+        });
+        pollAlerts();
+      };
+      const auditStream = new EventSource('/api/v1/stream/audit');
+      auditStream.onmessage = () => {
+        refreshStats();
+      };
+    }
+
+    initCharts();
     initWebSocket();
+    initStreams();
     refreshStats();
     pollAlerts();
     setInterval(refreshStats, 5000);
     setInterval(pollAlerts, 5000);
+
+    document.getElementById('login-operator').onclick = () => login('operator', 'operator123!');
+    document.getElementById('login-admin').onclick = () => login('admin', 'admin123!');
+    document.getElementById('clear-token').onclick = () => setToken('');
+    document.getElementById('copy-token').onclick = copyToken;
+    document.getElementById('demo-seed-btn').onclick = seedDemo;
+    document.getElementById('export-alerts-btn').onclick = () => (
+      exportCsv('/api/v1/report/alerts.csv')
+    );
+    document.getElementById('export-audit-btn').onclick = () => (
+      exportCsv('/api/v1/report/audit.csv')
+    );
+    setRoleControls('guest');
+    const existingToken = localStorage.getItem(tokenKey);
+    if (existingToken) {
+      setToken(existingToken);
+    }
   </script>
 </body>
 </html>"""
@@ -349,6 +659,22 @@ def format_uptime(seconds: float) -> str:
         parts.append(f"{minutes}m")
     parts.append(f"{rem}s")
     return " ".join(parts)
+
+
+def csv_response(rows: list[dict[str, Any]], filename: str) -> Response:
+    buffer = io.StringIO()
+    if rows:
+        writer = csv.DictWriter(buffer, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    else:
+        buffer.write("")
+    content = buffer.getvalue().encode("utf-8")
+    return Response(
+        content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 def create_app() -> FastAPI:
@@ -522,6 +848,143 @@ def create_app() -> FastAPI:
             }
             for r in rows
         ]
+
+    @app.get("/api/v1/me")
+    async def me(user: User = Depends(get_current_user)) -> dict[str, str]:
+        return {"username": user.username, "role": user.role.value}
+
+    @app.get("/api/v1/report/alerts.csv")
+    async def alerts_csv() -> Response:
+        factory = get_session_factory()
+        async with factory() as session:
+            query = select(SecurityAlert).order_by(desc(SecurityAlert.id)).limit(200)
+            rows = (await session.execute(query)).scalars().all()
+        payload = [
+            {
+                "id": a.id,
+                "severity": a.severity,
+                "title": a.title,
+                "robot_id": a.robot_id,
+                "mitre": a.mitre_technique,
+                "created_at": a.created_at.isoformat(),
+            }
+            for a in rows
+        ]
+        return csv_response(payload, "roscyber_alerts.csv")
+
+    @app.get("/api/v1/report/audit.csv")
+    async def audit_csv() -> Response:
+        factory = get_session_factory()
+        async with factory() as session:
+            query = select(CommandAuditLog).order_by(desc(CommandAuditLog.id)).limit(200)
+            rows = (await session.execute(query)).scalars().all()
+        payload = [
+            {
+                "id": a.id,
+                "robot_id": a.robot_id,
+                "decision": a.decision,
+                "reason": a.reason,
+                "created_at": a.created_at.isoformat(),
+            }
+            for a in rows
+        ]
+        return csv_response(payload, "roscyber_audit.csv")
+
+    @app.get("/api/v1/demo/seed")
+    async def demo_seed(request: Request) -> dict[str, str]:
+        factory = get_session_factory()
+        now = datetime.now(timezone.utc)
+        async with factory() as session:
+            for i in range(5):
+                session.add(
+                    RobotTelemetry(
+                        robot_id="robot-alpha",
+                        latitude=14.6 + (i * 0.0005),
+                        longitude=120.98 + (i * 0.0005),
+                        battery_pct=92,
+                        motor_rpm=650,
+                        firmware_version="1.0.0",
+                    )
+                )
+            session.add(
+                CommandAuditLog(
+                    robot_id="robot-alpha",
+                    user_id="operator",
+                    command_type="cmd_vel",
+                    payload="{}",
+                    decision="allow",
+                    reason="demo_allow",
+                    correlation_id="demo",
+                )
+            )
+            session.add(
+                CommandAuditLog(
+                    robot_id="robot-alpha",
+                    user_id="operator",
+                    command_type="cmd_vel",
+                    payload="{}",
+                    decision="deny",
+                    reason="demo_deny",
+                    correlation_id="demo",
+                )
+            )
+            session.add(
+                SecurityAlert(
+                    robot_id="robot-alpha",
+                    severity="high",
+                    title="Policy violation",
+                    description="Demo policy denial",
+                    mitre_technique="T0855",
+                    iec_control="SR 3.3",
+                    raw_event=json.dumps({"source": "demo"}),
+                    created_at=now,
+                )
+            )
+            await session.commit()
+        return {"status": "seeded"}
+
+    async def _stream_events(query_fn, key: str) -> Any:
+        last_id = 0
+        while True:
+            factory = get_session_factory()
+            async with factory() as session:
+                rows = (await session.execute(query_fn(last_id))).scalars().all()
+            for row in rows:
+                last_id = max(last_id, row.id)
+                payload = {
+                    "type": key,
+                    "id": row.id,
+                    "robot_id": getattr(row, "robot_id", ""),
+                    "title": getattr(row, "title", ""),
+                    "severity": getattr(row, "severity", ""),
+                    "decision": getattr(row, "decision", ""),
+                    "reason": getattr(row, "reason", ""),
+                    "created_at": row.created_at.isoformat(),
+                }
+                yield f"data: {json.dumps(payload)}\n\n"
+            await asyncio.sleep(2)
+
+    @app.get("/api/v1/stream/alerts")
+    async def stream_alerts() -> StreamingResponse:
+        def query(last_id: int):
+            return (
+                select(SecurityAlert)
+                .where(SecurityAlert.id > last_id)
+                .order_by(SecurityAlert.id.asc())
+            )
+
+        return StreamingResponse(_stream_events(query, "alert"), media_type="text/event-stream")
+
+    @app.get("/api/v1/stream/audit")
+    async def stream_audit() -> StreamingResponse:
+        def query(last_id: int):
+            return (
+                select(CommandAuditLog)
+                .where(CommandAuditLog.id > last_id)
+                .order_by(CommandAuditLog.id.asc())
+            )
+
+        return StreamingResponse(_stream_events(query, "audit"), media_type="text/event-stream")
 
     @app.websocket("/ws/alerts")
     async def ws_alerts(websocket: WebSocket) -> None:

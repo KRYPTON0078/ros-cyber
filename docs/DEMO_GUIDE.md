@@ -16,6 +16,12 @@
    ```
 4. Open the SOC dashboard:
    - http://localhost:8002
+5. Export reports and stream logs:
+   ```powershell
+   .\scripts\export-alerts.ps1 -Format csv
+   .\scripts\export-audit.ps1 -Format json
+   .\scripts\stream-logs.ps1 -Stream audit
+   ```
 
 ## Full Demo (Docker)
 

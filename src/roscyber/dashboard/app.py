@@ -121,6 +121,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       font-size: 0.75rem;
       color: #e6edf3;
     }
+    select {
+      background: #0b1220;
+      color: #e5e7eb;
+      border: 1px solid #1f2937;
+      border-radius: 6px;
+      padding: 0.2rem 0.4rem;
+      margin-left: 0.4rem;
+    }
     .alert {
       padding: 0.65rem 0.75rem;
       border-left: 3px solid #f85149;
@@ -270,6 +278,18 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     </div>
     <div class="panel full">
       <h2>Live Alert Feed</h2>
+      <div class="action-bar" style="margin-bottom: 0.6rem;">
+        <label class="pill">
+          Severity:
+          <select id="alert-filter">
+            <option value="all">All</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </label>
+      </div>
       <div id="alerts"><div class="alert medium">Waiting for events...</div></div>
     </div>
     <div class="panel full">
@@ -329,12 +349,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     const wsStatus = document.getElementById('ws-status');
     const tokenBox = document.getElementById('token-box');
     const timelineEl = document.getElementById('timeline');
+    const filterSelect = document.getElementById('alert-filter');
     const tokenKey = 'roscyber_token';
     const mapEl = document.getElementById('map');
     let map;
     let markers = {};
     let alertChart;
     let severityChart;
+    let currentFilter = 'all';
 
     function initMap() {
       map = L.map(mapEl, { zoomControl: true }).setView([14.6, 120.98], 12);
@@ -451,9 +473,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       const data = await r.json();
       if (Array.isArray(data) && data.length) {
         alertsEl.innerHTML = '';
-        data.forEach(addAlert);
-        updateCharts(data);
-        renderTimeline(data);
+        const filtered = data.filter((a) => (
+          currentFilter === 'all' || a.severity === currentFilter
+        ));
+        filtered.forEach(addAlert);
+        updateCharts(filtered);
+        renderTimeline(filtered);
       } else {
         renderEmptyAlerts();
       }
@@ -633,6 +658,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     if (existingToken) {
       setToken(existingToken);
     }
+    filterSelect.onchange = (event) => {
+      currentFilter = event.target.value;
+      pollAlerts();
+    };
   </script>
 </body>
 </html>"""

@@ -21,3 +21,7 @@
 - `GET /api/v1/alerts`
 - `GET /api/v1/audit`
 - `GET /api/v1/fleet`
+- `GET /api/v1/report/alerts.csv`
+- `GET /api/v1/report/alerts.json`
+- `GET /api/v1/report/audit.csv`
+- `GET /api/v1/report/audit.json`

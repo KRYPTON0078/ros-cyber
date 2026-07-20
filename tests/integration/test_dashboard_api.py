@@ -105,3 +105,21 @@ async def test_audit_csv(dashboard_app):
         resp = await client.get("/api/v1/report/audit.csv")
         assert resp.status_code == 200
         assert "roscyber_audit" in resp.headers.get("content-disposition", "")
+
+
+@pytest.mark.asyncio
+async def test_alerts_json(dashboard_app):
+    transport = ASGITransport(app=dashboard_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/v1/report/alerts.json")
+        assert resp.status_code == 200
+        assert isinstance(resp.json(), list)
+
+
+@pytest.mark.asyncio
+async def test_audit_json(dashboard_app):
+    transport = ASGITransport(app=dashboard_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/v1/report/audit.json")
+        assert resp.status_code == 200
+        assert isinstance(resp.json(), list)

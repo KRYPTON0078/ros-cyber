@@ -60,6 +60,7 @@ async def test_summary_endpoint(dashboard_app):
         resp = await client.get("/api/v1/summary")
         assert resp.status_code == 200
         assert resp.json()["active_robots"] == 1
+        assert "avg_battery" in resp.json()
 
 
 @pytest.mark.asyncio

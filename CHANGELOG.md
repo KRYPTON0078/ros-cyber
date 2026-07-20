@@ -27,6 +27,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local demo scripts for seeding telemetry and running attacks
 - Dashboard polling endpoints for alerts, audit, and fleet
 
+## [0.1.2] - 2026-07-21
+
+### Added
+- Real map view with battery legends
+- Alert charts, filters, and acknowledgement flow
+- Role-based session panel with token metadata
+- Attack replay timeline and live log streaming
+- CSV/JSON report exports and helper scripts
+
+[0.1.2]: https://github.com/KRYPTON0078/ros-cyber/releases/tag/v0.1.2
+
 [0.1.1]: https://github.com/KRYPTON0078/ros-cyber/releases/tag/v0.1.1
 
 [0.1.0]: https://github.com/KRYPTON0078/ros-cyber/releases/tag/v0.1.0

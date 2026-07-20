@@ -139,3 +139,13 @@ async def test_audit_stream_status(dashboard_app):
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get("/api/v1/stream/audit")
         assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_ack_alert(dashboard_app):
+    transport = ASGITransport(app=dashboard_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        alerts = await client.get("/api/v1/alerts?limit=1")
+        alert_id = alerts.json()[0]["id"]
+        resp = await client.post(f"/api/v1/alerts/{alert_id}/ack")
+        assert resp.status_code == 200

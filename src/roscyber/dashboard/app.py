@@ -379,6 +379,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       }).addTo(map);
     }
 
+    function batteryColor(level) {
+      if (level >= 70) return '#22c55e';
+      if (level >= 40) return '#fbbf24';
+      return '#ef4444';
+    }
+
     function initCharts() {
       const alertCtx = document.getElementById('alert-chart').getContext('2d');
       const severityCtx = document.getElementById('severity-chart').getContext('2d');
@@ -458,12 +464,25 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       } else {
         d.fleet.forEach((r) => {
           const coords = [r.latitude, r.longitude];
+          const color = batteryColor(r.battery_pct);
           if (!markers[r.robot_id]) {
-            markers[r.robot_id] = L.marker(coords).addTo(map).bindPopup(r.robot_id);
+            markers[r.robot_id] = L.circleMarker(coords, {
+              radius: 7,
+              color,
+              fillColor: color,
+              fillOpacity: 0.9
+            }).addTo(map).bindPopup(`${r.robot_id} (${r.battery_pct}%)`);
           } else {
             markers[r.robot_id].setLatLng(coords);
+            markers[r.robot_id].setStyle({ color, fillColor: color });
           }
         });
+        const bounds = L.latLngBounds(
+          d.fleet.map((r) => [r.latitude, r.longitude])
+        );
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [20, 20] });
+        }
       }
       const audit = document.querySelector('#audit-table tbody');
       const auditRows = d.audit

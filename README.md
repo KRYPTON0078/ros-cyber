@@ -124,6 +124,7 @@ ros-cyber/
 | [LOCAL_MODE.md](docs/LOCAL_MODE.md) | Local mode limitations |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes |
 | [ATTACK_REPLAY.md](docs/ATTACK_REPLAY.md) | Replay timeline behavior |
+| [LOG_STREAMING.md](docs/LOG_STREAMING.md) | SSE log streaming |
 
 ## License
 

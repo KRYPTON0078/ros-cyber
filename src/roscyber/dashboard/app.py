@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -19,6 +20,7 @@ from roscyber.shared.redis_client import get_redis
 
 configure_logging()
 logger = get_logger("dashboard")
+START_TIME = datetime.now(timezone.utc)
 
 DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="en">
@@ -186,6 +188,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <span class="pill">Profile: <strong id="profile">hardened</strong></span>
         <span class="pill">Kill Switch: <strong id="kill">OFF</strong></span>
         <span class="pill">Last Scan: <strong id="last-scan">-</strong></span>
+        <span class="pill">Uptime: <strong id="uptime">-</strong></span>
+        <span class="pill">Server Time: <strong id="server-time">-</strong></span>
       </div>
     </div>
     <div class="panel full">
@@ -222,9 +226,18 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       div.className = 'alert ' + (a.severity || 'medium');
       const title = a.mitre || 'T0000';
       const desc = a.description || '';
-      div.innerHTML = `<strong>[${title}] ${a.title}</strong><br/><small>${a.robot_id} — ${desc}</small>`;
+      div.innerHTML = (
+        `<strong>[${title}] ${a.title}</strong>` +
+        `<br/><small>${a.robot_id} — ${desc}</small>`
+      );
       alertsEl.insertBefore(div, alertsEl.firstChild);
       if (alertsEl.children.length > 20) alertsEl.removeChild(alertsEl.lastChild);
+    }
+
+    function renderEmptyAlerts() {
+      alertsEl.innerHTML = (
+        '<div class="alert low">No alerts yet. Run a demo event to populate the feed.</div>'
+      );
     }
 
     async function refreshStats() {
@@ -253,21 +266,47 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         `<tr><td>${a.robot_id}</td><td>${a.decision}</td><td>${a.reason}</td></tr>`
       ));
       audit.innerHTML = auditRows.join('');
-      d.recent_alerts.forEach(addAlert);
+      if (d.recent_alerts.length) {
+        d.recent_alerts.forEach(addAlert);
+      } else {
+        renderEmptyAlerts();
+      }
+      const uptimeEl = document.getElementById('uptime');
+      const serverTimeEl = document.getElementById('server-time');
+      if (uptimeEl) { uptimeEl.textContent = d.uptime_human; }
+      if (serverTimeEl) { serverTimeEl.textContent = d.server_time; }
     }
 
-    const ws = new WebSocket(`ws://${location.host}/ws/alerts`);
-    ws.onopen = () => {
-      wsStatus.textContent = 'Live';
-      wsStatus.style.background = '#238636';
-    };
-    ws.onclose = () => {
-      wsStatus.textContent = 'Disconnected';
-      wsStatus.style.background = '#da3633';
-    };
-    ws.onmessage = (e) => { addAlert(JSON.parse(e.data)); };
+    async function pollAlerts() {
+      const r = await fetch('/api/v1/alerts?limit=10');
+      const data = await r.json();
+      if (Array.isArray(data) && data.length) {
+        alertsEl.innerHTML = '';
+        data.forEach(addAlert);
+      } else {
+        renderEmptyAlerts();
+      }
+    }
+
+    let ws;
+    function initWebSocket() {
+      ws = new WebSocket(`ws://${location.host}/ws/alerts`);
+      ws.onopen = () => {
+        wsStatus.textContent = 'Live';
+        wsStatus.style.background = '#238636';
+      };
+      ws.onclose = () => {
+        wsStatus.textContent = 'Polling';
+        wsStatus.style.background = '#d29922';
+      };
+      ws.onmessage = (e) => { addAlert(JSON.parse(e.data)); };
+    }
+
+    initWebSocket();
     refreshStats();
+    pollAlerts();
     setInterval(refreshStats, 5000);
+    setInterval(pollAlerts, 5000);
   </script>
 </body>
 </html>"""
@@ -296,6 +335,22 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
+def format_uptime(seconds: float) -> str:
+    seconds = max(int(seconds), 0)
+    days, rem = divmod(seconds, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes, rem = divmod(rem, 60)
+    parts = []
+    if days:
+        parts.append(f"{days}d")
+    if hours or days:
+        parts.append(f"{hours}h")
+    if minutes or hours or days:
+        parts.append(f"{minutes}m")
+    parts.append(f"{rem}s")
+    return " ".join(parts)
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title="ROS Cyber Dashboard", version=__version__)
@@ -306,6 +361,9 @@ def create_app() -> FastAPI:
         asyncio.create_task(_alert_listener())
 
     async def _alert_listener() -> None:
+        if settings.disable_redis:
+            logger.info("redis_disabled_alert_listener")
+            return
         redis = await get_redis()
         last_id = "$"
         while True:
@@ -358,11 +416,12 @@ def create_app() -> FastAPI:
                     )
                 )
             ).scalars().all()
-            open_alerts = (
-                await session.execute(
-                    select(func.count()).select_from(SecurityAlert).where(SecurityAlert.acknowledged.is_(False))
-                )
-            ).scalar() or 0
+            open_alerts_query = (
+                select(func.count())
+                .select_from(SecurityAlert)
+                .where(SecurityAlert.acknowledged.is_(False))
+            )
+            open_alerts = (await session.execute(open_alerts_query)).scalar() or 0
             recent_query = select(SecurityAlert).order_by(desc(SecurityAlert.id)).limit(10)
             recent = (await session.execute(recent_query)).scalars().all()
             audit_query = select(CommandAuditLog).order_by(desc(CommandAuditLog.id)).limit(10)
@@ -370,6 +429,8 @@ def create_app() -> FastAPI:
             last_scan = (
                 await session.execute(select(ScanReport).order_by(desc(ScanReport.id)).limit(1))
             ).scalar_one_or_none()
+        server_time = datetime.now(timezone.utc)
+        uptime_seconds = (server_time - START_TIME).total_seconds()
         return {
             "active_robots": len(robots),
             "open_alerts": open_alerts,
@@ -377,6 +438,10 @@ def create_app() -> FastAPI:
             "profile": settings.profile,
             "kill_switch": settings.kill_switch_active,
             "last_scan": last_scan.created_at.isoformat() if last_scan else None,
+            "server_time": server_time.isoformat(timespec="seconds"),
+            "uptime_seconds": int(uptime_seconds),
+            "uptime_human": format_uptime(uptime_seconds),
+            "redis_enabled": not settings.disable_redis,
             "fleet": [
                 {
                     "robot_id": r.robot_id,
@@ -401,6 +466,62 @@ def create_app() -> FastAPI:
                 for a in audit
             ],
         }
+
+    @app.get("/api/v1/alerts")
+    async def alerts(limit: int = 20) -> list[dict[str, Any]]:
+        factory = get_session_factory()
+        async with factory() as session:
+            query = select(SecurityAlert).order_by(desc(SecurityAlert.id)).limit(limit)
+            rows = (await session.execute(query)).scalars().all()
+        return [
+            {
+                "id": a.id,
+                "severity": a.severity,
+                "title": a.title,
+                "description": a.description,
+                "robot_id": a.robot_id,
+                "mitre": a.mitre_technique,
+                "created_at": a.created_at.isoformat(),
+            }
+            for a in rows
+        ]
+
+    @app.get("/api/v1/audit")
+    async def audit(limit: int = 20) -> list[dict[str, Any]]:
+        factory = get_session_factory()
+        async with factory() as session:
+            query = select(CommandAuditLog).order_by(desc(CommandAuditLog.id)).limit(limit)
+            rows = (await session.execute(query)).scalars().all()
+        return [
+            {
+                "robot_id": a.robot_id,
+                "decision": a.decision,
+                "reason": a.reason,
+                "created_at": a.created_at.isoformat(),
+            }
+            for a in rows
+        ]
+
+    @app.get("/api/v1/fleet")
+    async def fleet() -> list[dict[str, Any]]:
+        factory = get_session_factory()
+        async with factory() as session:
+            query = (
+                select(RobotTelemetry)
+                .distinct(RobotTelemetry.robot_id)
+                .order_by(RobotTelemetry.robot_id, RobotTelemetry.id.desc())
+            )
+            rows = (await session.execute(query)).scalars().all()
+        return [
+            {
+                "robot_id": r.robot_id,
+                "latitude": r.latitude,
+                "longitude": r.longitude,
+                "battery_pct": r.battery_pct,
+                "recorded_at": r.recorded_at.isoformat(),
+            }
+            for r in rows
+        ]
 
     @app.websocket("/ws/alerts")
     async def ws_alerts(websocket: WebSocket) -> None:

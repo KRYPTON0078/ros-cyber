@@ -381,6 +381,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <button class="btn" id="clear-token">Clear Token</button>
         <button class="btn" id="copy-token">Copy Token</button>
       </div>
+      <div class="pill-row" style="margin-top: 0.6rem;">
+        <span class="pill">Expires: <strong id="token-exp">-</strong></span>
+        <span class="pill">User: <strong id="token-user">-</strong></span>
+      </div>
       <div class="token-box" id="token-box">No token stored.</div>
     </div>
   </main>
@@ -586,11 +590,29 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       if (token) {
         localStorage.setItem(tokenKey, token);
         tokenBox.textContent = token;
+        const meta = decodeJwt(token);
+        if (meta) {
+          const exp = meta.exp ? new Date(meta.exp * 1000).toLocaleString() : '-';
+          document.getElementById('token-exp').textContent = exp;
+          document.getElementById('token-user').textContent = meta.sub || '-';
+        }
         refreshRole(token);
       } else {
         localStorage.removeItem(tokenKey);
         tokenBox.textContent = 'No token stored.';
         document.getElementById('role').textContent = 'guest';
+        document.getElementById('token-exp').textContent = '-';
+        document.getElementById('token-user').textContent = '-';
+      }
+    }
+
+    function decodeJwt(token) {
+      try {
+        const payload = token.split('.')[1];
+        const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+        return JSON.parse(decoded);
+      } catch (_) {
+        return null;
       }
     }
 

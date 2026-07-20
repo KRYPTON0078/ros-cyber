@@ -131,6 +131,7 @@ ros-cyber/
 | [CHARTS.md](docs/CHARTS.md) | Alert charting |
 | [MAP.md](docs/MAP.md) | Fleet map and marker legend |
 | [SCRIPTS.md](docs/SCRIPTS.md) | Helper scripts |
+| [FLEET_HEALTH.md](docs/FLEET_HEALTH.md) | Fleet health summary |
 
 ## License
 

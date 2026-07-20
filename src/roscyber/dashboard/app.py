@@ -212,6 +212,19 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       border-radius: 6px;
     }
     .timeline-item strong { color: #93c5fd; }
+    .log-feed {
+      background: #0b1220;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      padding: 0.6rem;
+      max-height: 220px;
+      overflow: auto;
+      font-size: 0.78rem;
+    }
+    .log-line {
+      border-bottom: 1px solid #1f2937;
+      padding: 0.3rem 0;
+    }
     .action-bar {
       display: flex;
       gap: 0.6rem;
@@ -357,6 +370,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       <div class="timeline" id="timeline"></div>
     </div>
     <div class="panel full">
+      <h2>Live Log Stream</h2>
+      <div class="log-feed" id="log-feed">Waiting for logs...</div>
+    </div>
+    <div class="panel full">
       <h2>Operator Session</h2>
       <div class="action-bar">
         <button class="btn" id="login-operator">Login as Operator</button>
@@ -381,6 +398,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     const timelineEl = document.getElementById('timeline');
     const filterSelect = document.getElementById('alert-filter');
     const auditFilter = document.getElementById('audit-filter');
+    const logFeed = document.getElementById('log-feed');
     const tokenKey = 'roscyber_token';
     const mapEl = document.getElementById('map');
     let map;
@@ -678,7 +696,21 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         pollAlerts();
       };
       const auditStream = new EventSource('/api/v1/stream/audit');
-      auditStream.onmessage = () => {
+      auditStream.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (logFeed.textContent.includes('Waiting')) {
+          logFeed.textContent = '';
+        }
+        const line = document.createElement('div');
+        line.className = 'log-line';
+        line.textContent = (
+          `${new Date(data.created_at).toLocaleTimeString()} ` +
+          `${data.robot_id} ${data.decision} ${data.reason}`
+        );
+        logFeed.insertBefore(line, logFeed.firstChild);
+        if (logFeed.children.length > 20) {
+          logFeed.removeChild(logFeed.lastChild);
+        }
         refreshStats();
       };
     }

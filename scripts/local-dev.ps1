@@ -48,10 +48,14 @@ function Start-ServiceProcess {
         [int]$Port
     )
     $log = Join-Path $logDir "$Name.log"
-    if (Test-Path $log) { Clear-Content $log }
-    Write-Host "Starting $Name on :$Port..." -ForegroundColor Green
     $errLog = Join-Path $logDir "$Name.err.log"
-    if (Test-Path $errLog) { Clear-Content $errLog }
+    if (Test-Path $log) {
+        try { Clear-Content $log } catch { }
+    }
+    if (Test-Path $errLog) {
+        try { Clear-Content $errLog } catch { }
+    }
+    Write-Host "Starting $Name on :$Port..." -ForegroundColor Green
     $proc = Start-Process -FilePath $python -ArgumentList "-m", "uvicorn", $App, "--host", "0.0.0.0", "--port", "$Port" `
         -RedirectStandardOutput $log -RedirectStandardError $errLog -PassThru -WindowStyle Hidden
     $processes += $proc

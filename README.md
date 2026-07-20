@@ -128,6 +128,7 @@ ros-cyber/
 | [ROLE_BASED_UI.md](docs/ROLE_BASED_UI.md) | Role-based UI behavior |
 | [EXPORTS.md](docs/EXPORTS.md) | Alert and audit exports |
 | [TOKENS.md](docs/TOKENS.md) | REST auth tokens |
+| [CHARTS.md](docs/CHARTS.md) | Alert charting |
 
 ## License
 

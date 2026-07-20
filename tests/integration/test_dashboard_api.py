@@ -123,3 +123,19 @@ async def test_audit_json(dashboard_app):
         resp = await client.get("/api/v1/report/audit.json")
         assert resp.status_code == 200
         assert isinstance(resp.json(), list)
+
+
+@pytest.mark.asyncio
+async def test_alert_stream_status(dashboard_app):
+    transport = ASGITransport(app=dashboard_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/v1/stream/alerts")
+        assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_audit_stream_status(dashboard_app):
+    transport = ASGITransport(app=dashboard_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/v1/stream/audit")
+        assert resp.status_code == 200

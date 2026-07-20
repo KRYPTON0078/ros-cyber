@@ -125,6 +125,7 @@ ros-cyber/
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes |
 | [ATTACK_REPLAY.md](docs/ATTACK_REPLAY.md) | Replay timeline behavior |
 | [LOG_STREAMING.md](docs/LOG_STREAMING.md) | SSE log streaming |
+| [ROLE_BASED_UI.md](docs/ROLE_BASED_UI.md) | Role-based UI behavior |
 
 ## License
 

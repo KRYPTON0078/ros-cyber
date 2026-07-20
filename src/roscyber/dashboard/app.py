@@ -129,6 +129,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       padding: 0.2rem 0.4rem;
       margin-left: 0.4rem;
     }
+    input {
+      background: #0b1220;
+      color: #e5e7eb;
+      border: 1px solid #1f2937;
+      border-radius: 6px;
+      padding: 0.3rem 0.5rem;
+      font-size: 0.8rem;
+    }
     .alert {
       padding: 0.65rem 0.75rem;
       border-left: 3px solid #f85149;
@@ -315,6 +323,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     </div>
     <div class="panel">
       <h2>Recent Audit Log</h2>
+      <div class="action-bar" style="margin-bottom: 0.4rem;">
+        <input id="audit-filter" placeholder="Filter robot..." />
+      </div>
       <table id="audit-table">
         <thead>
           <tr><th>Robot</th><th>Decision</th><th>Reason</th></tr>
@@ -350,6 +361,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     const tokenBox = document.getElementById('token-box');
     const timelineEl = document.getElementById('timeline');
     const filterSelect = document.getElementById('alert-filter');
+    const auditFilter = document.getElementById('audit-filter');
     const tokenKey = 'roscyber_token';
     const mapEl = document.getElementById('map');
     let map;
@@ -357,6 +369,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     let alertChart;
     let severityChart;
     let currentFilter = 'all';
+    let auditQuery = '';
 
     function initMap() {
       map = L.map(mapEl, { zoomControl: true }).setView([14.6, 120.98], 12);
@@ -453,9 +466,13 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         });
       }
       const audit = document.querySelector('#audit-table tbody');
-      const auditRows = d.audit.map((a) => (
-        `<tr><td>${a.robot_id}</td><td>${a.decision}</td><td>${a.reason}</td></tr>`
-      ));
+      const auditRows = d.audit
+        .filter((a) => (
+          auditQuery === '' || a.robot_id.toLowerCase().includes(auditQuery)
+        ))
+        .map((a) => (
+          `<tr><td>${a.robot_id}</td><td>${a.decision}</td><td>${a.reason}</td></tr>`
+        ));
       audit.innerHTML = auditRows.join('');
       if (d.recent_alerts.length) {
         d.recent_alerts.forEach(addAlert);
@@ -661,6 +678,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     filterSelect.onchange = (event) => {
       currentFilter = event.target.value;
       pollAlerts();
+    };
+    auditFilter.oninput = (event) => {
+      auditQuery = event.target.value.toLowerCase();
+      refreshStats();
     };
   </script>
 </body>

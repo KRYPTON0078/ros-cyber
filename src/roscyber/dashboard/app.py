@@ -470,10 +470,18 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       div.className = 'alert ' + (a.severity || 'medium');
       const title = a.mitre || 'T0000';
       const desc = a.description || '';
+      const ackButton = a.acknowledged
+        ? '<span class="pill">ACK</span>'
+        : `<button class="btn" data-ack="${a.id}">Acknowledge</button>`;
       div.innerHTML = (
         `<strong>[${title}] ${a.title}</strong>` +
-        `<br/><small>${a.robot_id} — ${desc}</small>`
+        `<br/><small>${a.robot_id} — ${desc}</small><br/>` +
+        `<div class="action-bar" style="margin-top:0.4rem;">${ackButton}</div>`
       );
+      const ackEl = div.querySelector('[data-ack]');
+      if (ackEl) {
+        ackEl.onclick = () => ackAlert(a.id);
+      }
       alertsEl.insertBefore(div, alertsEl.firstChild);
       if (alertsEl.children.length > 20) alertsEl.removeChild(alertsEl.lastChild);
     }
@@ -561,6 +569,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       } else {
         renderEmptyAlerts();
       }
+    }
+
+    async function ackAlert(id) {
+      await fetch(`/api/v1/alerts/${id}/ack`, { method: 'POST' });
+      pollAlerts();
     }
 
     function updateCharts(alerts) {
@@ -973,10 +986,21 @@ def create_app() -> FastAPI:
                 "description": a.description,
                 "robot_id": a.robot_id,
                 "mitre": a.mitre_technique,
+                "acknowledged": a.acknowledged,
                 "created_at": a.created_at.isoformat(),
             }
             for a in rows
         ]
+
+    @app.post("/api/v1/alerts/{alert_id}/ack")
+    async def ack_alert(alert_id: int) -> dict[str, str]:
+        factory = get_session_factory()
+        async with factory() as session:
+            alert = await session.get(SecurityAlert, alert_id)
+            if alert:
+                alert.acknowledged = True
+                await session.commit()
+        return {"status": "acknowledged"}
 
     @app.get("/api/v1/audit")
     async def audit(limit: int = 20) -> list[dict[str, Any]]:

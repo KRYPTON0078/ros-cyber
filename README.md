@@ -118,6 +118,10 @@ ros-cyber/
 | [THREAT_MODEL.md](docs/THREAT_MODEL.md) | STRIDE analysis |
 | [PENTEST_REPORT.md](docs/PENTEST_REPORT.md) | 6 findings with CVSS and PoCs |
 | [HARDENING_GUIDE.md](docs/HARDENING_GUIDE.md) | SROS2, TLS, production checklist |
+| [DEMO_GUIDE.md](docs/DEMO_GUIDE.md) | Step-by-step demo instructions |
+| [API_REFERENCE.md](docs/API_REFERENCE.md) | Quick API reference |
+| [ALERT_RULES.md](docs/ALERT_RULES.md) | Alert rules and severities |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes |
 
 ## License
 

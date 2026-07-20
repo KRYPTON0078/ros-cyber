@@ -264,6 +264,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <button class="btn primary" id="demo-seed-btn">Seed Demo Data</button>
         <button class="btn" id="export-alerts-btn">Export Alerts CSV</button>
         <button class="btn" id="export-audit-btn">Export Audit CSV</button>
+        <button class="btn" id="export-alerts-json">Alerts JSON</button>
+        <button class="btn" id="export-audit-json">Audit JSON</button>
       </div>
     </div>
     <div class="panel full">
@@ -514,18 +516,26 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       const seedBtn = document.getElementById('demo-seed-btn');
       const exportAlertsBtn = document.getElementById('export-alerts-btn');
       const exportAuditBtn = document.getElementById('export-audit-btn');
+      const exportAlertsJson = document.getElementById('export-alerts-json');
+      const exportAuditJson = document.getElementById('export-audit-json');
       if (role === 'admin') {
         seedBtn.disabled = false;
         exportAlertsBtn.disabled = false;
         exportAuditBtn.disabled = false;
+        exportAlertsJson.disabled = false;
+        exportAuditJson.disabled = false;
       } else if (role === 'operator') {
         seedBtn.disabled = false;
         exportAlertsBtn.disabled = true;
         exportAuditBtn.disabled = true;
+        exportAlertsJson.disabled = true;
+        exportAuditJson.disabled = true;
       } else {
         seedBtn.disabled = true;
         exportAlertsBtn.disabled = true;
         exportAuditBtn.disabled = true;
+        exportAlertsJson.disabled = true;
+        exportAuditJson.disabled = true;
       }
     }
 
@@ -611,6 +621,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     );
     document.getElementById('export-audit-btn').onclick = () => (
       exportCsv('/api/v1/report/audit.csv')
+    );
+    document.getElementById('export-alerts-json').onclick = () => (
+      exportCsv('/api/v1/report/alerts.json')
+    );
+    document.getElementById('export-audit-json').onclick = () => (
+      exportCsv('/api/v1/report/audit.json')
     );
     setRoleControls('guest');
     const existingToken = localStorage.getItem(tokenKey);
@@ -872,6 +888,24 @@ def create_app() -> FastAPI:
         ]
         return csv_response(payload, "roscyber_alerts.csv")
 
+    @app.get("/api/v1/report/alerts.json")
+    async def alerts_json() -> list[dict[str, Any]]:
+        factory = get_session_factory()
+        async with factory() as session:
+            query = select(SecurityAlert).order_by(desc(SecurityAlert.id)).limit(200)
+            rows = (await session.execute(query)).scalars().all()
+        return [
+            {
+                "id": a.id,
+                "severity": a.severity,
+                "title": a.title,
+                "robot_id": a.robot_id,
+                "mitre": a.mitre_technique,
+                "created_at": a.created_at.isoformat(),
+            }
+            for a in rows
+        ]
+
     @app.get("/api/v1/report/audit.csv")
     async def audit_csv() -> Response:
         factory = get_session_factory()
@@ -889,6 +923,23 @@ def create_app() -> FastAPI:
             for a in rows
         ]
         return csv_response(payload, "roscyber_audit.csv")
+
+    @app.get("/api/v1/report/audit.json")
+    async def audit_json() -> list[dict[str, Any]]:
+        factory = get_session_factory()
+        async with factory() as session:
+            query = select(CommandAuditLog).order_by(desc(CommandAuditLog.id)).limit(200)
+            rows = (await session.execute(query)).scalars().all()
+        return [
+            {
+                "id": a.id,
+                "robot_id": a.robot_id,
+                "decision": a.decision,
+                "reason": a.reason,
+                "created_at": a.created_at.isoformat(),
+            }
+            for a in rows
+        ]
 
     @app.get("/api/v1/demo/seed")
     async def demo_seed(request: Request) -> dict[str, str]:

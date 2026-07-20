@@ -8,3 +8,10 @@
 | policy_violation | Command denied by policy | High |
 | kill_switch | Kill switch activated | Critical |
 | ml_anomaly | Z-score threshold exceeded | High |
+
+## Operator Workflow
+
+- Validate alert metadata and severity.
+- Cross-check against MITRE technique.
+- Document response in incident timeline.
+- Acknowledge alerts in the SOC dashboard.

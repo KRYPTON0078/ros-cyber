@@ -291,6 +291,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <div class="val" id="scan-count">-</div>
           <div class="lbl">Scan Findings</div>
         </div>
+        <div class="stat">
+          <div class="val" id="avg-battery">-</div>
+          <div class="lbl">Avg Battery</div>
+        </div>
+        <div class="stat">
+          <div class="val" id="low-battery">-</div>
+          <div class="lbl">Low Battery</div>
+        </div>
       </div>
     </div>
     <div class="panel">
@@ -499,6 +507,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       document.getElementById('robot-count').textContent = d.active_robots;
       document.getElementById('alert-count').textContent = d.open_alerts;
       document.getElementById('scan-count').textContent = d.scan_findings;
+      document.getElementById('avg-battery').textContent = `${d.avg_battery}%`;
+      document.getElementById('low-battery').textContent = d.low_battery;
       document.getElementById('profile').textContent = d.profile;
       document.getElementById('kill').textContent = d.kill_switch ? 'ON' : 'OFF';
       document.getElementById('last-scan').textContent = d.last_scan || 'Never';
@@ -936,12 +946,17 @@ def create_app() -> FastAPI:
             last_scan = (
                 await session.execute(select(ScanReport).order_by(desc(ScanReport.id)).limit(1))
             ).scalar_one_or_none()
+        battery_values = [r.battery_pct for r in robots]
+        avg_battery = sum(battery_values) / len(battery_values) if battery_values else 0
+        low_battery = sum(1 for r in robots if r.battery_pct < 40)
         server_time = datetime.now(timezone.utc)
         uptime_seconds = (server_time - START_TIME).total_seconds()
         return {
             "active_robots": len(robots),
             "open_alerts": open_alerts,
             "scan_findings": last_scan.findings_count if last_scan else 0,
+            "avg_battery": round(avg_battery, 1),
+            "low_battery": low_battery,
             "profile": settings.profile,
             "kill_switch": settings.kill_switch_active,
             "last_scan": last_scan.created_at.isoformat() if last_scan else None,

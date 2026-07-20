@@ -133,6 +133,7 @@ ros-cyber/
 | [SCRIPTS.md](docs/SCRIPTS.md) | Helper scripts |
 | [FLEET_HEALTH.md](docs/FLEET_HEALTH.md) | Fleet health summary |
 | [ALERT_FILTERS.md](docs/ALERT_FILTERS.md) | Alert severity filters |
+| [AUDIT_FILTERS.md](docs/AUDIT_FILTERS.md) | Audit log filters |
 
 ## License
 

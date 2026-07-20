@@ -45,6 +45,18 @@ pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org -e ".[
 
 This starts Ingestion API, Policy Engine, and SOC Dashboard on ports 8000–8002 using SQLite.
 
+### Local Demo (no Docker)
+
+```powershell
+.\scripts\demo-seed.ps1     # seed telemetry + policy decisions
+.\scripts\demo-attack.ps1   # run attack simulator
+```
+
+CLI alternative:
+```powershell
+roscyber demo-seed
+```
+
 ## Demo Credentials
 
 | User | Password | Role |
@@ -114,4 +126,3 @@ MIT — see [LICENSE](LICENSE)
 ## Security
 
 See [SECURITY.md](SECURITY.md) for responsible disclosure policy.
-# CI trigger

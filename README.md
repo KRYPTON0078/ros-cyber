@@ -123,6 +123,7 @@ ros-cyber/
 | [ALERT_RULES.md](docs/ALERT_RULES.md) | Alert rules and severities |
 | [LOCAL_MODE.md](docs/LOCAL_MODE.md) | Local mode limitations |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes |
+| [ATTACK_REPLAY.md](docs/ATTACK_REPLAY.md) | Replay timeline behavior |
 
 ## License
 

@@ -87,3 +87,21 @@ async def test_fleet_endpoint(dashboard_app):
         resp = await client.get("/api/v1/fleet")
         assert resp.status_code == 200
         assert resp.json()[0]["robot_id"] == "robot-alpha"
+
+
+@pytest.mark.asyncio
+async def test_alerts_csv(dashboard_app):
+    transport = ASGITransport(app=dashboard_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/v1/report/alerts.csv")
+        assert resp.status_code == 200
+        assert "roscyber_alerts" in resp.headers.get("content-disposition", "")
+
+
+@pytest.mark.asyncio
+async def test_audit_csv(dashboard_app):
+    transport = ASGITransport(app=dashboard_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/v1/report/audit.csv")
+        assert resp.status_code == 200
+        assert "roscyber_audit" in resp.headers.get("content-disposition", "")

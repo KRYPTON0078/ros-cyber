@@ -302,6 +302,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <span class="pill">Uptime: <strong id="uptime">-</strong></span>
         <span class="pill">Server Time: <strong id="server-time">-</strong></span>
         <span class="pill">Role: <strong id="role">guest</strong></span>
+        <span class="pill">Redis: <strong id="redis-status">-</strong></span>
       </div>
       <div class="action-bar" style="margin-top: 0.8rem;">
         <button class="btn primary" id="demo-seed-btn">Seed Demo Data</button>
@@ -501,6 +502,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       document.getElementById('profile').textContent = d.profile;
       document.getElementById('kill').textContent = d.kill_switch ? 'ON' : 'OFF';
       document.getElementById('last-scan').textContent = d.last_scan || 'Never';
+      document.getElementById('redis-status').textContent = d.redis_enabled ? 'ON' : 'OFF';
       const tbody = document.querySelector('#fleet-table tbody');
       const fleetRows = d.fleet.map((r) => (
         `<tr><td>${r.robot_id}</td><td>${r.latitude.toFixed(4)}</td>` +

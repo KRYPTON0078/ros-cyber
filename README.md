@@ -127,6 +127,7 @@ ros-cyber/
 | [LOG_STREAMING.md](docs/LOG_STREAMING.md) | SSE log streaming |
 | [ROLE_BASED_UI.md](docs/ROLE_BASED_UI.md) | Role-based UI behavior |
 | [EXPORTS.md](docs/EXPORTS.md) | Alert and audit exports |
+| [TOKENS.md](docs/TOKENS.md) | REST auth tokens |
 
 ## License
 

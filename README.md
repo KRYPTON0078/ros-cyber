@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Coverage](https://img.shields.io/badge/coverage-80%25+-green.svg)](tests/)
 
-**Production-grade ROS2 cyber-physical security platform** — policy-gated robot commands, real-time threat detection, offensive security lab, and SOC dashboard.
+**Production-grade ROS2 cyber-physical security platform** — policy-gated robot commands, real-time threat detection, offensive security lab, and SOC dashboard!
 
 > Built by **Magne Dina Neves** — international robotics competition winner. ROS Cyber applies competition-grade systems thinking to securing autonomous robot fleets.
 

@@ -7,7 +7,7 @@
 
 **Production-grade ROS2 cyber-physical security platform** — policy-gated robot commands, real-time threat detection, offensive security lab, and SOC dashboard!
 
-> Built by **Magne Dina Neves** — international robotics competition winner. ROS Cyber applies competition-grade systems thinking to securing autonomous robot fleets.
+> Built by **Magne Dina Neves** — international robotics builder. ROS Cyber applies competition-grade systems thinking to securing autonomous robot fleets.
 
 ## Features
 
